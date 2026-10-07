@@ -466,7 +466,10 @@ final class Lexicon {
         splits = num.split(whereSeparator: { !$0.isLetter }).map(String.init)
       } else {
         if let val = Decimal(string: num) {
-          splits = num2Words.convert(val).split(separator: " ").map(String.init)
+          // Modified by Firestorm Interactive, 2026-10-07 (Apache License 2.0, section 4(b)): split on
+          // non-letters, as misaki's en.py does, not on spaces. "thirty-five" stayed one token, missed the
+          // lexicon and was spelled letter by letter ("$35" -> "T-H-I-R-T-Y-F-I-V-E dollars").
+          splits = num2Words.convert(val).split(whereSeparator: { !$0.isLetter }).map(String.init)
         } else {
           splits = num.split(whereSeparator: { !$0.isLetter }).map(String.init)
         }

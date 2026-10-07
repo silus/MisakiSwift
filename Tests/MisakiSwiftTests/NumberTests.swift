@@ -32,3 +32,12 @@ private func words(_ n: Int) -> String { spellOut.string(from: NSNumber(value: n
     expectSameWords(g2p, String(n), words(n))
   }
 }
+
+@Test func dollarAmountsReadAsWords() async throws {
+  let g2p = EnglishG2P(british: false)
+  for n in 1...100 {
+    expectSameWords(g2p, "It cost $\(n).", "It cost \(words(n)) dollar\(n == 1 ? "" : "s").")
+  }
+  expectSameWords(g2p, "It cost $1500.", "It cost one thousand five hundred dollars.")
+  expectSameWords(g2p, "room B35", "room B thirty-five")
+}
