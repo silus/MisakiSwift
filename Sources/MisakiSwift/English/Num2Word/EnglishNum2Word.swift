@@ -139,8 +139,11 @@ struct EnglishNum2Word {
       }
     }
     
-    // Handle thousands and higher
-    for (value, word) in midNumWords.sorted(by: { $0.0 > $1.0 }) {
+    // Handle very large numbers using cards
+    // Modified by Firestorm Interactive, 2026-10-07 (Apache License 2.0, section 4(b)): moved above
+    // the thousands loop. Its largest unit is 1000, so it matched first and "1,000,000" was spoken
+    // "one thousand thousand"; this loop was never reached.
+    for (value, word) in cards.sorted(by: { $0.key > $1.key }) {
       if number >= value {
         let quotient = number / value
         let remainder = number % value
@@ -153,8 +156,8 @@ struct EnglishNum2Word {
       }
     }
     
-    // Handle very large numbers using cards
-    for (value, word) in cards.sorted(by: { $0.key > $1.key }) {
+    // Handle thousands and higher
+    for (value, word) in midNumWords.sorted(by: { $0.0 > $1.0 }) {
       if number >= value {
         let quotient = number / value
         let remainder = number % value
