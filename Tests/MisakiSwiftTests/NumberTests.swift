@@ -57,3 +57,33 @@ private func words(_ n: Int) -> String { spellOut.string(from: NSNumber(value: n
   // Abbreviations keep the letter path.
   expectSameWords(g2p, "the U.S. at 9 a.m.", "the U.S. at nine a.m.")
 }
+
+@Test func timesReadAsClockTimes() async throws {
+  let g2p = EnglishG2P(british: false)
+  expectSameWords(g2p, "at 1:00", "at one o'clock")
+  expectSameWords(g2p, "at 1:05", "at one oh five")
+  expectSameWords(g2p, "at 1:00 am", "at one a.m.")
+  expectSameWords(g2p, "at 1:00 a.m.", "at one a.m.")
+  expectSameWords(g2p, "at 1:00 pm", "at one p.m.")
+  expectSameWords(g2p, "6:00 to 7:00", "six o'clock to seven o'clock")
+  expectSameWords(g2p, "at 12:00", "at twelve o'clock")
+  for m in 1...9 {
+    expectSameWords(g2p, "at 3:0\(m)", "at three oh \(words(m))")
+  }
+  // am reads A.M. at every hour, spaced or not, never the verb; and a sentence-final one ends the sentence once.
+  let aye = g2p.phonemize(text: "a.m.").0.filter { $0 != "." }
+  for h in 1...12 {
+    for form in ["\(h):00 am", "\(h):00am", "\(h):00 AM", "\(h):30am", "\(h):30 a.m."] {
+      let ps = g2p.phonemize(text: "found at \(form) then").0
+      #expect(ps.contains(aye), "\(form): \(ps)")
+    }
+    #expect(!g2p.phonemize(text: "found at \(h):30am.").0.contains(".."))
+  }
+  expectSameWords(g2p, "found at 4:30am.", "found at four thirty a.m.")
+  // Minutes 10-59 keep their words.
+  expectSameWords(g2p, "at 1:15", "at one fifteen")
+  expectSameWords(g2p, "at 2:25", "at two twenty-five")
+  expectSameWords(g2p, "at 1:40", "at one forty")
+  // Not a time: a one-digit right side.
+  #expect(g2p.phonemize(text: "odds of 10:1").0.contains(":"))
+}

@@ -134,6 +134,43 @@ final public class EnglishG2P {
   // Text pre-processing tuple for easing the tokenization
   typealias PreprocessTuple = (text: String, tokens: [String], features: [PreprocessFeature])
     
+  // Modified by Firestorm Interactive, 2026-10-07 (Apache License 2.0, section 4(b)): added the time rule
+  // from Kokoro v0.19's normalize_text (split_num), which misaki does not carry. Without it "1:00" was
+  // spoken "one zero" and "1:05" "one five". 12-hour times only, as in v0.19. Two differences: on the
+  // hour with am/pm reads "1 a.m.", not "1 o'clock a.m.", and every am/pm, spaced or not ("4:30am"), is
+  // written "a.m."/"p.m.": a bare "am" after a number is often tagged as the verb.
+  static let timeRegex = try! NSRegularExpression(
+    pattern: #"(?<![\d:.])\b(1[0-2]|0?[1-9]):([0-5]\d)(?![\d:])(?:\s*([ap]\.?m\.?)(?![a-z]))?"#,
+    options: [.caseInsensitive])
+
+  /// "1:00" -> "1 o'clock", "1:05" -> "1 oh 5", "1:15" -> "1 15", "1:00 pm" -> "1 p.m.", "4:30am" -> "4 30 a.m.".
+  static func expandingTimes(_ text: String) -> String {
+    let ns = text as NSString
+    var out = ""
+    var last = 0
+    for m in timeRegex.matches(in: text, range: NSRange(location: 0, length: ns.length)) {
+      out += ns.substring(with: NSRange(location: last, length: m.range.location - last))
+      let hour = ns.substring(with: m.range(at: 1)).drop { $0 == "0" }
+      let minute = Int(ns.substring(with: m.range(at: 2)))!
+      var suffix = ""
+      if m.range(at: 3).location != NSNotFound {
+        let end = m.range.location + m.range.length
+        let followedByDot = end < ns.length && ns.character(at: end) == 46
+        suffix = (ns.substring(with: m.range(at: 3)).lowercased().hasPrefix("a") ? " a.m" : " p.m") + (followedByDot ? "" : ".")
+      }
+      if minute == 0 {
+        out += suffix.isEmpty ? "\(hour) o'clock" : "\(hour)\(suffix)"
+      } else if minute < 10 {
+        out += "\(hour) oh \(minute)\(suffix)"
+      } else {
+        out += "\(hour) \(minute)\(suffix)"
+      }
+      last = m.range.location + m.range.length
+    }
+    out += ns.substring(from: last)
+    return out
+  }
+
   /// Preprocesses the string in case there are some parts where the pronounciation or stress is pre-dictated using Markdown-like link format, e.g.
   /// "[Misaki](/misˈɑki/) is a G2P engine designed for [Kokoro](/kˈOkəɹO/) models."
   private func preprocess(text: String) -> PreprocessTuple {
@@ -156,8 +193,9 @@ final public class EnglishG2P {
       let start = input.index(input.startIndex, offsetBy: range.location)
       let end = input.index(start, offsetBy: range.length)
 
-      result += String(input[lastEnd..<start])
-      tokens.append(contentsOf: String(input[lastEnd..<start]).split(separator: " ").map(String.init))
+      let plain = EnglishG2P.expandingTimes(String(input[lastEnd..<start]))
+      result += plain
+      tokens.append(contentsOf: plain.split(separator: " ").map(String.init))
 
       let grapheme = ns.substring(with: m.range(at: 1))
       let phoneme = ns.substring(with: m.range(at: 2))
@@ -183,8 +221,9 @@ final public class EnglishG2P {
     }
     
     if lastEnd < input.endIndex {
-      result += String(input[lastEnd...])
-      tokens.append(contentsOf: String(input[lastEnd...]).split(separator: " ").map(String.init))
+      let plain = EnglishG2P.expandingTimes(String(input[lastEnd...]))
+      result += plain
+      tokens.append(contentsOf: plain.split(separator: " ").map(String.init))
     }
     
     return (text: result, tokens: tokens, features: features)
