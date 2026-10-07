@@ -13,11 +13,13 @@ struct EnglishNum2Word {
   private let pointWord = "point"
   private let excludeTitle = ["and", "point", "minus"]
   
+  // Modified by Firestorm Interactive, 2026-10-07 (Apache License 2.0, section 4(b)): added
+  // (20, "twenty"). Without it every number from 21 to 29 lost its tens word ("25" -> "five").
   private let midNumWords: [(Int, String)] = [
     (1000, "thousand"), (100, "hundred"),
     (90, "ninety"), (80, "eighty"), (70, "seventy"),
     (60, "sixty"), (50, "fifty"), (40, "forty"),
-    (30, "thirty")
+    (30, "thirty"), (20, "twenty")
   ]
   
   private let lowNumWords = [
