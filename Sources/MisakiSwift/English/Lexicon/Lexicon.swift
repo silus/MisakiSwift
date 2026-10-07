@@ -198,7 +198,11 @@ final class Lexicon {
       return lookup(target, tag: nil, stress: -0.5, ctx: ctx)
     } else if let sym = Lexicon.symbolSet[word] {
       return lookup(sym, tag: nil, stress: nil, ctx: ctx)
-    } else if word.trimmingCharacters(in: CharacterSet(charactersIn: ".")).contains(".") {
+    // Modified by Firestorm Interactive, 2026-10-07 (Apache License 2.0, section 4(b)): added misaki en.py's
+    // letters-only guard. Without it a decimal such as "1.05" or "3.5" took this abbreviation path, had no
+    // letters to spell, and was spoken as nothing.
+    } else if word.trimmingCharacters(in: CharacterSet(charactersIn: ".")).contains("."),
+              word.replacingOccurrences(of: ".", with: "").allSatisfy({ $0.isLetter }) {
       let parts = word.split(separator: ".")
       if parts.map({ $0.count }).max() ?? 0 < 3 {
         return getNNP(word)

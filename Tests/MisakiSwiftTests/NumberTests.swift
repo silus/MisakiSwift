@@ -41,3 +41,19 @@ private func words(_ n: Int) -> String { spellOut.string(from: NSNumber(value: n
   expectSameWords(g2p, "It cost $1500.", "It cost one thousand five hundred dollars.")
   expectSameWords(g2p, "room B35", "room B thirty-five")
 }
+
+@Test func dollarsAndCentsAreSpoken() async throws {
+  let g2p = EnglishG2P(british: false)
+  expectSameWords(g2p, "It cost $1.05.", "It cost one dollar and five cents.")
+  expectSameWords(g2p, "It cost $25.50.", "It cost twenty-five dollars and fifty cents.")
+  expectSameWords(g2p, "It cost $0.50.", "It cost fifty cents.")
+  expectSameWords(g2p, "It cost $1.00.", "It cost one dollar.")
+  expectSameWords(g2p, "It cost $1,250.", "It cost one thousand two hundred fifty dollars.")
+  expectSameWords(g2p, "It was 3.5 miles.", "It was three point five miles.")
+  // The symptom was silence, so check for the amount itself, not only agreement with the reference.
+  for text in ["$1.05", "$25.50", "$0.50", "$1.00", "3.5"] {
+    #expect(spoken(g2p, "It cost \(text) today.") != spoken(g2p, "It cost today."), "\(text) was silent")
+  }
+  // Abbreviations keep the letter path.
+  expectSameWords(g2p, "the U.S. at 9 a.m.", "the U.S. at nine a.m.")
+}

@@ -317,6 +317,13 @@ final public class EnglishG2P {
     }
   }
   
+  // Modified by Firestorm Interactive, 2026-10-07 (Apache License 2.0, section 4(b)): added, and used in place
+  // of `tag == .number` below. NLTagger tags "1.05", "25.50", "1,250" as OtherWord where spaCy tags them CD,
+  // so the currency was dropped and "$1,250" lost its "dollars".
+  static func isNumeral(_ token: MToken) -> Bool {
+    token.tag == .number || token.text.range(of: #"^\d[\d,]*(\.\d+)?$"#, options: .regularExpression) != nil
+  }
+
   func retokenize(_ tokens: [MToken]) -> [Any] {
     var words: [Any] = []
     var currency: String? = nil
@@ -359,9 +366,9 @@ final public class EnglishG2P {
           }
           token.`_`.rating = 4
         } else if currency != nil {
-          if token.tag != .number {
+          if !EnglishG2P.isNumeral(token) {
             currency = nil
-          } else if j + 1 == subtokens.count && (i + 1 == tokens.count || tokens[i + 1].tag != .number) {
+          } else if j + 1 == subtokens.count && (i + 1 == tokens.count || !EnglishG2P.isNumeral(tokens[i + 1])) {
             token.`_`.currency = currency
           }
         } else if j > 0 && j < subtokens.count - 1 && token.text == "2" {
