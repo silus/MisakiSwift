@@ -87,3 +87,27 @@ private func words(_ n: Int) -> String { spellOut.string(from: NSNumber(value: n
   // Not a time: a one-digit right side.
   #expect(g2p.phonemize(text: "odds of 10:1").0.contains(":"))
 }
+
+@Test func aTimeEndingASentenceKeepsTheSentencesFullStop() async throws {
+  let g2p = EnglishG2P(british: false)
+  let aye = g2p.phonemize(text: "a.m.").0.filter { $0 != "." }
+  let pee = g2p.phonemize(text: "p.m.").0.filter { $0 != "." }
+  // A capital follows: one full stop between the abbreviation and the next sentence, spaced or not, dotted or not.
+  for (text, marker) in [("found at 4:30am. One shot", aye), ("at 9:05 p.m. The door", pee),
+                         ("at 11:00pm. Nobody", pee), ("at 4:30 a.m. One shot", aye), ("At 2:15am. Nobody heard it", aye)] {
+    let ps = g2p.phonemize(text: text).0
+    #expect(ps.contains(marker + ". "), "\(text): \(ps)")
+    #expect(!ps.contains(".."), "\(text): \(ps)")
+  }
+  // The end of the text keeps exactly one.
+  let end = g2p.phonemize(text: "It was 2:15am.").0
+  #expect(end.hasSuffix(aye + ".") && !end.contains(".."), "\(end)")
+  // An hour without minutes isn't a time to this rule, and keeps its stop as it always did.
+  #expect(g2p.phonemize(text: "at 11pm. Nobody").0.contains(pee + ". "))
+  // Unchanged: mid-sentence, and a lowercase follower, which is not taken as a sentence end.
+  for text in ["at 4:30am then", "at 4:30 a.m. on the dot", "at 4:30am. and then"] {
+    let ps = g2p.phonemize(text: text).0
+    #expect(ps.contains(aye) && !ps.contains("."), "\(text): \(ps)")
+  }
+  expectSameWords(g2p, "found at 4:30am. One shot", "found at four thirty a.m. one shot")
+}

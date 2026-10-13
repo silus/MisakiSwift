@@ -143,7 +143,26 @@ final public class EnglishG2P {
     pattern: #"(?<![\d:.])\b(1[0-2]|0?[1-9]):([0-5]\d)(?![\d:])(?:\s*([ap]\.?m\.?)(?![a-z]))?"#,
     options: [.caseInsensitive])
 
-  /// "1:00" -> "1 o'clock", "1:05" -> "1 oh 5", "1:15" -> "1 15", "1:00 pm" -> "1 p.m.", "4:30am" -> "4 30 a.m.".
+  // Modified by Firestorm Interactive, 2026-10-13 (Apache License 2.0, section 4(b)): a time that ends
+  // a sentence kept no full stop. In "at 4:30am. One shot" the sentence's own "." was matched as the "."
+  // of "a.m.", and the written "a.m." is read as one abbreviation token that swallows its last "." when
+  // a capital follows, so the phonemes ran on into the next sentence. When the matched am/pm ends in a
+  // "." followed by a capital or the end of the text, it is written "AM."/"PM." instead: the same
+  // phonemes, and the "." comes through as its own sentence terminator. A lowercase follower is not
+  // taken as a sentence end.
+  static func endsSentence(_ text: NSString, at index: Int) -> Bool {
+    var i = index
+    while i < text.length, let scalar = Unicode.Scalar(text.character(at: i)),
+          CharacterSet.whitespacesAndNewlines.contains(scalar) {
+      i += 1
+    }
+    guard i < text.length else { return true }
+    guard i > index, let scalar = Unicode.Scalar(text.character(at: i)) else { return false }
+    return CharacterSet.uppercaseLetters.contains(scalar)
+  }
+
+  /// "1:00" -> "1 o'clock", "1:05" -> "1 oh 5", "1:15" -> "1 15", "1:00 pm" -> "1 p.m.", "4:30am" -> "4 30 a.m.",
+  /// "4:30am. One" -> "4 30 AM. One".
   static func expandingTimes(_ text: String) -> String {
     let ns = text as NSString
     var out = ""
@@ -156,7 +175,13 @@ final public class EnglishG2P {
       if m.range(at: 3).location != NSNotFound {
         let end = m.range.location + m.range.length
         let followedByDot = end < ns.length && ns.character(at: end) == 46
-        suffix = (ns.substring(with: m.range(at: 3)).lowercased().hasPrefix("a") ? " a.m" : " p.m") + (followedByDot ? "" : ".")
+        let marker = ns.substring(with: m.range(at: 3))
+        let am = marker.lowercased().hasPrefix("a")
+        if marker.hasSuffix(".") && endsSentence(ns, at: end) {
+          suffix = am ? " AM." : " PM."
+        } else {
+          suffix = (am ? " a.m" : " p.m") + (followedByDot ? "" : ".")
+        }
       }
       if minute == 0 {
         out += suffix.isEmpty ? "\(hour) o'clock" : "\(hour)\(suffix)"
