@@ -377,6 +377,10 @@ final class Lexicon {
       stem = String(word.dropLast())
     } else if word.count > 4 && word.hasSuffix("ed") && !word.hasSuffix("eed"), isKnown(String(word.dropLast(2))) {
       stem = String(word.dropLast(2))
+    } else if word.count > 4 && word.hasSuffix("ied"), isKnown(String(word.dropLast(3)) + "y") {
+      // Modified by Firestorm Interactive, 2026-11-06 (Apache License 2.0, section 4(b)): added the
+      // -ied -> -y stem, as stem_s has for -ies. "copied" fell through to the guesser as kˈOpid.
+      stem = String(word.dropLast(3)) + "y"
     }
     
     guard let s = stem else { return (nil, nil) }
